@@ -10,7 +10,8 @@ import {
     Row,
     Col,
     Icon
-} from 'vant' import 'vant/lib/index.css'
+} from 'vant'
+import 'vant/lib/index.css'
 
 const app = createApp(App)
 
