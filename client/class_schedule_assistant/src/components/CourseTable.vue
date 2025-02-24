@@ -57,13 +57,46 @@
           <div v-for="day in weekDays" :key="day" class="course-cell">
             <div v-if="getFilteredCourse(index, day)" 
                  class="course-item"
-                 :style="{ backgroundColor: getCourseColor(index, day) }">
+                 :style="{ backgroundColor: getCourseColor(index, day) }"
+                 @click="showTeacherInfo(getFilteredCourse(index, day))">
               <div class="course-name">{{ getFilteredCourse(index, day).name }}</div>
               <div class="course-info">
-                {{ getFilteredCourse(index, day).location }}
-                <div class="course-week">第{{ getFilteredCourse(index, day).week }}周</div>
+                <div class="location">{{ getFilteredCourse(index, day).location }}</div>
+                <div class="teacher">{{ getFilteredCourse(index, day).teacher }}</div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 教师信息弹窗 -->
+    <div class="modal" v-if="showModal" @click.self="closeModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>课程信息</h3>
+          <span class="close-btn" @click="closeModal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="info-item">
+            <label>课程名称：</label>
+            <span>{{ selectedCourse?.name }}</span>
+          </div>
+          <div class="info-item">
+            <label>任课教师：</label>
+            <span>{{ selectedCourse?.teacher }}</span>
+          </div>
+          <div class="info-item">
+            <label>教师职称：</label>
+            <span>{{ selectedCourse?.teacherTitle }}</span>
+          </div>
+          <div class="info-item">
+            <label>联系方式：</label>
+            <span>{{ selectedCourse?.teacherContact }}</span>
+          </div>
+          <div class="info-item">
+            <label>办公地点：</label>
+            <span>{{ selectedCourse?.teacherOffice }}</span>
           </div>
         </div>
       </div>
@@ -109,28 +142,73 @@ export default {
           timeSlot: 0, 
           name: '高等数学', 
           location: '教学楼A101',
+          teacher: '张教授',
+          teacherTitle: '教授',
+          teacherContact: '13800138000',
+          teacherOffice: '理科大楼B栋501',
           semester: 1,
-          week: 1,
-          weekSpan: [1, 2, 3, 4, 5, 6, 7, 8] // 表示第1-8周上课
+          weekSpan: [1, 2, 3, 4, 5, 6, 7, 8]
         },
-        { 
+       {
+          day: '周二', 
+          timeSlot: 1, 
+          name: '大学物理', 
+          location: '教学楼B201',
+          teacher: '李教授',
+          teacherTitle: '教授',
+          teacherContact: '13900139000',
+          teacherOffice: '工科大楼A栋312',
+          semester: 2,
+          weekSpan: [5, 6, 7, 8, 9, 10, 11, 12]
+        },
+        {
           day: '周三', 
           timeSlot: 2, 
-          name: '大学英语', 
-          location: '教学楼B203',
+          name: '数据结构', 
+          location: '信息楼C305',
+          teacher: '王副教授',
+          teacherTitle: '副教授',
+          teacherContact: '13700137000',
+          teacherOffice: '信息大楼D栋306',
           semester: 1,
-          week: 1,
+          weekSpan: [3, 4, 5, 6, 7, 8, 9, 10]
+        },
+        {
+          day: '周四', 
+          timeSlot: 3, 
+          name: '宏观经济学', 
+          location: '经济学院楼D401',
+          teacher: '赵教授',
+          teacherTitle: '教授',
+          teacherContact: '13600136000',
+          teacherOffice: '经济学院E栋102',
+          semester: 2,
+          weekSpan: [8, 9, 10, 11, 12, 13, 14, 15]
+        },
+        {
+          day: '周五', 
+          timeSlot: 4, 
+          name: '英语写作', 
+          location: '外语楼E105',
+          teacher: '刘讲师',
+          teacherTitle: '讲师',
+          teacherContact: '13500135000',
+          teacherOffice: '外语楼F栋204',
+          semester: 1,
           weekSpan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-          },
-           { 
-      day: '周五', 
-    timeSlot: 4, 
-    name: "云计算与大数据", 
-    location: "教学楼C204",
-    semester: 2,
-    week: 2,
-    weekSpan: [2, 3, 5, 7] 
-  }
+        },
+        {
+          day: '周一', 
+          timeSlot: 0, 
+          name: '计算机导论', 
+          location: '实验楼Z303',
+          teacher: '陈教授',
+          teacherTitle: '教授',
+          teacherContact: '13400134000',
+          teacherOffice: '工程中心G栋608',
+          semester: 1,
+          weekSpan: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+        }
         
       ],
       courseColors: [
@@ -140,7 +218,9 @@ export default {
         '#FFE8E0', // 浅橙
         '#E8E0FF', // 浅紫
         '#FFFFD0', // 浅黄
-      ]
+      ],
+      showModal: false,
+      selectedCourse: null,
     }
   },
   methods: {
@@ -168,6 +248,14 @@ export default {
       // 这里需要实现具体的日期转换周次的逻辑
       // 示例实现
       return 1
+    },
+    showTeacherInfo(course) {
+      this.selectedCourse = course;
+      this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+      this.selectedCourse = null;
     }
   },
   computed: {
@@ -329,6 +417,12 @@ select, input {
   justify-content: center;
   width: 100%;
   margin: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.course-item:hover {
+  transform: scale(1.02);
 }
 
 .course-name {
@@ -343,9 +437,11 @@ select, input {
   color: #666;
 }
 
-.course-week {
-  font-size: 11px;
-  color: #888;
+.location {
+  margin-bottom: 2px;
+}
+
+.teacher {
   margin-top: 2px;
 }
 
@@ -383,8 +479,7 @@ select, input {
     font-size: 12px;
   }
 
-  .course-info,
-  .course-week {
+  .course-info {
     font-size: 10px;
   }
 }
@@ -403,6 +498,86 @@ select, input {
 
   .course-cell {
     height: 80px;
+  }
+}
+
+/* 模态框样式 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.close-btn {
+  cursor: pointer;
+  font-size: 22px;
+  color: #666;
+}
+
+.modal-body {
+  padding: 15px;
+}
+
+.info-item {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.info-item label {
+  width: 80px;
+  color: #666;
+  font-size: 14px;
+}
+
+.info-item span {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+  }
+
+  .info-item {
+    font-size: 13px;
+  }
+
+  .info-item label {
+    width: 70px;
   }
 }
 </style> 
