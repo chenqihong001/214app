@@ -1,3 +1,105 @@
+<script setup>
+import { ref, computed, watch } from 'vue'
+
+// 定义props（移至代码开头）
+const props = defineProps({
+  courses: {
+    type: Array,
+    default: () => []
+  }
+})
+
+// 响应式数据
+const weekDays = ref(['周一', '周二', '周三', '周四', '周五'])
+const timeRanges = ref([
+  '8:00-9:35',
+  '9:55-11:30',
+  '13:30-15:05',
+  '15:25-17:00',
+  '18:30-20:05'
+])
+
+const semesters = ref([
+  { id: 1, name: '2023-2024学年第一学期', startDate: '2023-09-04' },
+  { id: 2, name: '2023-2024学年第二学期', startDate: '2024-03-01' }
+])
+
+const currentSemester = ref(1)
+const currentWeek = ref(1)
+const searchKeyword = ref('')
+const selectedDate = ref('')
+const showModal = ref(false)
+const selectedCourse = ref(null)
+
+// 修复后的计算属性
+const filteredCourses = computed(() => {
+  return props.courses.filter(course => {  // 移除错误的 .value
+    const matchesSemester = course.semester === currentSemester.value
+    const matchesWeek = course.weekSpan?.includes(currentWeek.value) ?? false
+    const matchesSearch = !searchKeyword.value || 
+      course.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
+    return matchesSemester && matchesWeek && matchesSearch
+  })
+})
+
+// 监听器保持不变
+watch(selectedDate, (newVal) => {
+  if (newVal) currentWeek.value = getWeekFromDate(newVal)
+})
+
+const getWeekFromDate = (dateStr) => {
+  const selectedDate = new Date(dateStr)
+  const semester = semesters.value.find(s => s.id === currentSemester.value)
+  if (!semester) return 1
+  
+  const startDate = new Date(semester.startDate)
+  const diff = selectedDate - startDate
+  if (diff < 0) return 1
+  
+  return Math.floor(diff / (7 * 86400000)) + 1
+}
+
+// 优化后的课程获取方法
+const getCourse = (timeSlot, day) => {
+  return filteredCourses.value.find(c => 
+    c.timeSlot === timeSlot && 
+    c.day === day
+  ) || null // 避免返回undefined
+}
+
+// 颜色生成函数保持不变
+const getCourseColor = (course) => {
+  if (!course) return 'transparent'
+  const colors = [
+    '#FFE0E0', '#E0F0FF', '#E0FFE0', 
+    '#FFE8E0', '#E8E0FF', '#FFFFD0'
+  ]
+  let hash = 0
+  for (let i = 0; i < course.name.length; i++) {
+    hash = course.name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
+}
+
+// 其他方法保持不变
+const resetFilters = () => {
+  currentWeek.value = 1
+  searchKeyword.value = ''
+  selectedDate.value = ''
+}
+
+const showTeacherInfo = (course) => {
+  selectedCourse.value = course
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+  selectedCourse.value = null
+}
+</script>
+
+
 <template>
   <div class="course-container">
     <!-- 查询条件区域 -->
@@ -17,7 +119,7 @@
         <div class="week-select">
           <label>周次</label>
           <select v-model="currentWeek">
-            <option v-for="week in totalWeeks" :key="week" :value="week">
+            <option v-for="week in 20" :key="week" :value="week">
               第{{ week }}周
             </option>
           </select>
@@ -37,9 +139,8 @@
       </div>
     </div>
 
-    <!-- 课表主体部分 -->
+    <!-- 课表主体 -->
     <div class="course-table">
-      <!-- 表头 -->
       <div class="table-header">
         <div class="time-column">时间</div>
         <div v-for="day in weekDays" :key="day" class="day-column">
@@ -47,24 +148,24 @@
         </div>
       </div>
       
-      <!-- 课表主体 -->
       <div class="table-body">
-        <div v-for="(time, index) in timeSlots" :key="index" class="table-row">
+        <div v-for="(time, index) in timeRanges" :key="index" class="table-row">
           <div class="time-column">
             <div class="period">第{{ index + 1 }}节</div>
-            <div class="time">{{ timeRanges[index] }}</div>
+            <div class="time">{{ time }}</div>
           </div>
           <div v-for="day in weekDays" :key="day" class="course-cell">
-            <div v-if="getFilteredCourse(index, day)" 
-                 class="course-item"
-                 :style="{ backgroundColor: getCourseColor(index, day) }"
-                 @click="showTeacherInfo(getFilteredCourse(index, day))">
-              <div class="course-name">{{ getFilteredCourse(index, day).name }}</div>
-              <div class="course-info">
-                <div class="location">{{ getFilteredCourse(index, day).location }}</div>
-                <div class="teacher">{{ getFilteredCourse(index, day).teacher }}</div>
+            <template v-if="getCourse(index + 1, day)">
+              <div class="course-item"
+                   :style="{ backgroundColor: getCourseColor(getCourse(index + 1, day)) }"
+                   @click="showTeacherInfo(getCourse(index + 1, day))">
+                <div class="course-name">{{ getCourse(index + 1, day).name }}</div>
+                <div class="course-info">
+                  <div class="location">{{ getCourse(index + 1, day).location }}</div>
+                  <div class="teacher">{{ getCourse(index + 1, day).teacher }}</div>
+                </div>
               </div>
-            </div>
+            </template>
           </div>
         </div>
       </div>
@@ -104,184 +205,7 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'CourseTable',
-  data() {
-    return {
-      weekDays: ['周一', '周二', '周三', '周四', '周五'],
-      timeSlots: [
-        '第一节 8:00-9:35',
-        '第二节 9:55-11:30',
-        '第三节 13:30-15:05',
-        '第四节 15:25-17:00',
-        '第五节 18:30-20:05'
-      ],
-      timeRanges: [
-        '8:00-9:35',
-        '9:55-11:30',
-        '13:30-15:05',
-        '15:25-17:00',
-        '18:30-20:05'
-      ],
-      // 学期数据
-      semesters: [
-        { id: 1, name: '2023-2024学年第一学期' },
-        { id: 2, name: '2023-2024学年第二学期' }
-      ],
-      currentSemester: 1,
-      currentWeek: 1,
-      totalWeeks: 20,
-      searchKeyword: '',
-      selectedDate: '',
-      
-      // 课程数据增加周次信息
-      courses: [
-        { 
-          day: '周一', 
-          timeSlot: 0, 
-          name: '高等数学', 
-          location: '教学楼A101',
-          teacher: '张教授',
-          teacherTitle: '教授',
-          teacherContact: '13800138000',
-          teacherOffice: '理科大楼B栋501',
-          semester: 1,
-          weekSpan: [1, 2, 3, 4, 5, 6, 7, 8]
-        },
-       {
-          day: '周二', 
-          timeSlot: 1, 
-          name: '大学物理', 
-          location: '教学楼B201',
-          teacher: '李教授',
-          teacherTitle: '教授',
-          teacherContact: '13900139000',
-          teacherOffice: '工科大楼A栋312',
-          semester: 2,
-          weekSpan: [5, 6, 7, 8, 9, 10, 11, 12]
-        },
-        {
-          day: '周三', 
-          timeSlot: 2, 
-          name: '数据结构', 
-          location: '信息楼C305',
-          teacher: '王副教授',
-          teacherTitle: '副教授',
-          teacherContact: '13700137000',
-          teacherOffice: '信息大楼D栋306',
-          semester: 1,
-          weekSpan: [3, 4, 5, 6, 7, 8, 9, 10]
-        },
-        {
-          day: '周四', 
-          timeSlot: 3, 
-          name: '宏观经济学', 
-          location: '经济学院楼D401',
-          teacher: '赵教授',
-          teacherTitle: '教授',
-          teacherContact: '13600136000',
-          teacherOffice: '经济学院E栋102',
-          semester: 2,
-          weekSpan: [8, 9, 10, 11, 12, 13, 14, 15]
-        },
-        {
-          day: '周五', 
-          timeSlot: 4, 
-          name: '英语写作', 
-          location: '外语楼E105',
-          teacher: '刘讲师',
-          teacherTitle: '讲师',
-          teacherContact: '13500135000',
-          teacherOffice: '外语楼F栋204',
-          semester: 1,
-          weekSpan: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        },
-        {
-          day: '周一', 
-          timeSlot: 0, 
-          name: '计算机导论', 
-          location: '实验楼Z303',
-          teacher: '陈教授',
-          teacherTitle: '教授',
-          teacherContact: '13400134000',
-          teacherOffice: '工程中心G栋608',
-          semester: 1,
-          weekSpan: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
-        }
-        
-      ],
-      courseColors: [
-        '#FFE0E0', // 浅粉红
-        '#E0F0FF', // 浅蓝
-        '#E0FFE0', // 浅绿
-        '#FFE8E0', // 浅橙
-        '#E8E0FF', // 浅紫
-        '#FFFFD0', // 浅黄
-      ],
-      showModal: false,
-      selectedCourse: null,
-    }
-  },
-  methods: {
-    getFilteredCourse(timeSlot, day) {
-      return this.filteredCourses.find(course => 
-        course.timeSlot === timeSlot && 
-        course.day === day
-      )
-    },
-    getCourseColor(timeSlot, day) {
-      const course = this.getFilteredCourse(timeSlot, day)
-      if (course) {
-        const colorIndex = this.courses.findIndex(c => c.name === course.name)
-        return this.courseColors[colorIndex % this.courseColors.length]
-      }
-      return 'transparent'
-    },
-    resetFilters() {
-      this.currentWeek = 1
-      this.searchKeyword = ''
-      this.selectedDate = ''
-    },
-    // 根据日期获取对应的周次
-    getWeekFromDate(date) {
-      // 这里需要实现具体的日期转换周次的逻辑
-      // 示例实现
-      return 1
-    },
-    showTeacherInfo(course) {
-      this.selectedCourse = course;
-      this.showModal = true;
-    },
-    closeModal() {
-      this.showModal = false;
-      this.selectedCourse = null;
-    }
-  },
-  computed: {
-    filteredCourses() {
-      return this.courses.filter(course => {
-        // 学期筛选
-        if (course.semester !== this.currentSemester) return false
-        
-        // 周次筛选
-        if (!course.weekSpan.includes(this.currentWeek)) return false
-        
-        // 课程名称搜索
-        if (this.searchKeyword && !course.name.includes(this.searchKeyword)) return false
-        
-        // 日期筛选
-        if (this.selectedDate) {
-          const weekFromDate = this.getWeekFromDate(this.selectedDate)
-          if (!course.weekSpan.includes(weekFromDate)) return false
-        }
-        
-        return true
-      })
-    }
-  }
-}
-</script>
+
 
 <style scoped>
 .course-container {
@@ -337,7 +261,6 @@ select, input {
   font-size: 14px;
   background: #fff;
 }
-
 .reset-btn {
   padding: 5px 13px;
   background-color: #f0f0f0;
@@ -362,6 +285,7 @@ select, input {
   position: sticky;
   top: 0;
   z-index: 1;
+  min-height: 50px; /* 新增 */
 }
 
 .time-column, .day-column {
@@ -370,6 +294,17 @@ select, input {
   border-right: 1px solid #eaeaea;
   border-bottom: 1px solid #eaeaea;
   font-size: 13px;
+  display: flex; /* 新增 */
+  align-items: center; /* 新增 */
+  justify-content: center; /* 新增 */
+  box-sizing: border-box; /* 新增 */
+  line-height: 1.4; /* 新增 */
+  min-height: 100%; /* 新增 */
+}
+
+/* 单独调整时间列 */
+.time-column.header-cell {
+  padding: 10px 4px; /* 上下 padding 加大 */
 }
 
 .table-row {
@@ -379,13 +314,9 @@ select, input {
 
 .time-column {
   background-color: #f8f9fa;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  line-height: 1.2;
-  height: 100%;
+  flex-direction: column; /* 修改为 flex 布局 */
+  padding: 8px 4px; /* 统一为相同 padding */
+  height: 100%; /* 新增 */
 }
 
 .period {
