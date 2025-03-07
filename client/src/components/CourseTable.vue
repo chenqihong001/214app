@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 // 定义props（移至代码开头）
 const props = defineProps({
@@ -20,8 +20,8 @@ const timeRanges = ref([
 ])
 
 const semesters = ref([
-  { id: 1, name: '2023-2024学年第一学期', startDate: '2023-09-04' },
-  { id: 2, name: '2023-2024学年第二学期', startDate: '2024-03-01' }
+  { id: 1, name: '2025-2026学年第一学期', startDate: '2025-02-17' },
+  { id: 2, name: '2025-2026学年第二学期', startDate: '2025-09-01' }
 ])
 
 const currentSemester = ref(1)
@@ -47,6 +47,15 @@ watch(selectedDate, (newVal) => {
   if (newVal) currentWeek.value = getWeekFromDate(newVal)
 })
 
+// 获取本地日期字符串格式
+const getLocalDateString = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+const today = new Date()
+const todayDateString = getLocalDateString(today)
 const getWeekFromDate = (dateStr) => {
   const selectedDate = new Date(dateStr)
   const semester = semesters.value.find(s => s.id === currentSemester.value)
@@ -97,7 +106,17 @@ const closeModal = () => {
   showModal.value = false
   selectedCourse.value = null
 }
+
+ onMounted(() => {
+    selectedDate.value = getLocalDateString(today)
+    currentWeek.value = getWeekFromDate(selectedDate.value)
+  })
+
 </script>
+
+
+
+
 
 
 <template>
@@ -377,7 +396,7 @@ select, input {
 }
 
 /* 移动端适配 */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 500px){
   .course-container {
     padding: 8px;
   }
@@ -498,7 +517,7 @@ select, input {
 }
 
 /* 移动端适配 */
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 400px) {
   .modal-content {
     width: 95%;
   }

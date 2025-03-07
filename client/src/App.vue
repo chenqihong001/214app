@@ -31,13 +31,37 @@ import CourseTable from './components/CourseTable.vue'
 const data = ref([])  // 改为数组类型初始值
 const isLoading = ref(true)  // 新增加载状态
 const error = ref(null)
+const visitCount = ref(0)
+const url1 = 'http://4fr5x3.natappfree.cc/api/courses'
+const url2 = 'http://4fr5x3.natappfree.cc/api/courses2'
+// 改进版统计方法
+const recordVisit = () => {
+  try {
+    // 使用 ?? 处理 null 的情况
+    const storedCount = localStorage.getItem('coursePageVisits') ?? '0'
+    
+    // 双重验证确保是有效数字
+    const parsedCount = isNaN(storedCount) ? 0 : parseInt(storedCount, 10)
+    
+    const newCount = Math.max(0, parsedCount) + 1  // 防止负数
+    localStorage.setItem('coursePageVisits', newCount.toString())
+    visitCount.value = newCount
+  } catch (error) {
+    console.error('本地存储访问失败:', error)
+    // 降级处理：至少显示1次访问
+    visitCount.value = Math.max(1, visitCount.value)
+  }
+}
+
 
 // 封装数据加载方法
 const loadCourses = async () => {
   try {
     isLoading.value = true
     error.value = null
-    const response = await axios.get('http://4dw9nm.natappfree.cc/api/courses')
+    const timestamp = new Date().getTime();
+    const url = timestamp % 2 ? url1 : url2;
+    const response = await axios.get(url);
     
     // 验证数据结构
     if (response.data?.code === 200 && Array.isArray(response.data.data)) {
@@ -63,17 +87,32 @@ const loadCourses = async () => {
   }
 }
 
-// 初始化加载
-onMounted(loadCourses)
+onMounted(() => {
+  recordVisit()
+  loadCourses()
+})
+
 </script>
 
 <style>
 .app {
-  max-width: 1200px;
+  max-width: 500px;
   margin: 0 auto;
   padding: 20px;
+  transform: scale(1); /* 缩小到 10% */  
+  transform-origin: top left; /* 确保缩放从左上角开始 */  
 }
-
+.visit-counter {
+  text-align: center;
+  margin: 15px 0;
+  padding: 10px;
+  background: #e8f4fc;
+  border: 1px solid #a1c4e9;
+  border-radius: 4px;
+  color: #2c3e50;
+  font-size: 0.95em;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
 h1 {
   text-align: center;
   color: #2c3e50;
